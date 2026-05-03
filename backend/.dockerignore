@@ -1,0 +1,12 @@
+.venv
+.pytest_cache
+.hypothesis
+__pycache__
+*.pyc
+*.db
+*.db-journal
+tests/
+.env
+.env.local
+pytest-cache-files-*
+

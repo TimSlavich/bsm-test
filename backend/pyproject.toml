@@ -1,0 +1,133 @@
+[project]
+name = "brand-monitor"
+version = "0.1.0"
+description = "Brand SERP Monitor — top-10 SERP classification for iGaming"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "aiosqlite>=0.20",
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.3",
+    "playwright>=1.48",
+    "playwright-stealth>=2.0",
+    "python-dotenv>=1.0",
+    "structlog>=24.4",
+    "litellm>=1.52",
+    # Langfuse SDK — used by LiteLLM's success/failure callbacks for
+    # LLM trace observability. Optional at runtime (the langfuse_enabled
+    # property gates registration) but required when the user configures
+    # LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY.
+    # Pinned <3 because LiteLLM's langfuse callback (≤1.x) reads the SDK
+    # version as ``langfuse.version.__version__``; v3 renamed it to
+    # ``_version`` and the callback raises AttributeError on every call.
+    "langfuse>=2.50,<3",
+    # APScheduler 4.x ships a different API; pin to 3.x major.
+    "apscheduler>=3.10,<4",
+]
+
+[project.scripts]
+start = "brand_monitor.cli:start"
+migrate = "brand_monitor.cli:migrate"
+seed-history = "brand_monitor.scripts.seed_history:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.115",
+    "ruff>=0.7",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/brand_monitor"]
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+markers = [
+    "property: property-based tests with Hypothesis",
+    "integration: integration tests requiring DB",
+    "slow: tests that hit the network or run Playwright",
+]
+# Treat warnings as errors so deprecations (e.g. datetime.utcnow) surface
+# during test runs and don't quietly accumulate. Third-party noise is
+# explicitly allow-listed.
+filterwarnings = [
+    "error",
+    # Pydantic v2 still emits its own DeprecationWarning in some chains
+    # (especially via litellm callbacks). Tolerated.
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::DeprecationWarning:litellm.*",
+    "ignore::DeprecationWarning:apscheduler.*",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+# Mirror of pyrightconfig.json — basedpyright reads pyproject.toml first,
+# so this stops the IDE complaining about unresolved runtime imports
+# (structlog, playwright, litellm, …) which are present in ``.venv``.
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonPath = ".venv/bin/python"
+pythonVersion = "3.12"
+include = ["src", "tests", "alembic/env.py"]
+extraPaths = ["src"]
+exclude = [
+    "**/__pycache__",
+    "**/.venv",
+    "**/node_modules",
+    "**/.pytest_cache",
+    "**/.hypothesis",
+    "alembic/versions",
+]
+reportMissingImports = "error"
+reportMissingTypeStubs = "none"
+
+[tool.basedpyright]
+venvPath = "."
+venv = ".venv"
+pythonPath = ".venv/bin/python"
+pythonVersion = "3.12"
+include = ["src", "tests", "alembic/env.py"]
+extraPaths = ["src"]
+exclude = [
+    "**/__pycache__",
+    "**/.venv",
+    "**/node_modules",
+    "**/.pytest_cache",
+    "**/.hypothesis",
+    "alembic/versions",
+]
+reportMissingImports = "error"
+reportMissingTypeStubs = "none"
+# basedpyright is stricter than pyright by default; relax noise that
+# doesn't matter for a typed-stdlib-friendly codebase.
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownParameterType = "none"
+reportImplicitOverride = "none"
+reportAny = "none"

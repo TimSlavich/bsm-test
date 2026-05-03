@@ -1,0 +1,257 @@
+{
+  "app": {
+    "title": "Brand SERP Monitor",
+    "subtitle": "Live SERP intelligence for branded queries"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "compare": "Compare snapshots",
+    "scheduler": "Scheduler",
+    "methodology": "Methodology"
+  },
+  "actions": {
+    "run_scan": "Run live scan",
+    "scanning": "Scanning…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "compare": "Compare",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "create": "Create"
+  },
+  "scan_form": {
+    "brand": "Brand",
+    "keyword": "Keyword",
+    "geo": "Geo",
+    "top_n": "Top N",
+    "tooltip_brand": "The brand slug (e.g. starcasino) — must already exist in the DB.",
+    "tooltip_keyword": "The exact query to fetch from the SERP source.",
+    "tooltip_geo": "ISO-2 country code; controls language and search engine region.",
+    "tooltip_top_n": "How many SERP positions to fetch and classify."
+  },
+  "empty": {
+    "title": "No snapshots yet",
+    "body": "Run your first scan to populate the dashboard. Default values fetch the top 10 results for {{keyword}} in {{geo}}.",
+    "cta": "Run first scan"
+  },
+  "progress": {
+    "title": "Live scan in progress",
+    "scan_start": "Starting scan…",
+    "serp_fetch_start": "Fetching SERP…",
+    "serp_fetched": "Got {{n}} results from {{source}}",
+    "classify_phase_start": "Classifying {{total}} domains…",
+    "classifying": "Classifying {{index}}/{{total}}: {{domain}}",
+    "classified": "Classified {{domain}} → {{category}} (stage {{stage_used}})",
+    "persist_done": "Saving snapshot #{{snapshot_id}}",
+    "complete": "Done. Snapshot #{{snapshot_id}} captured ({{n_results}} domains, source: {{source}})",
+    "error": "Scan failed: {{message}}",
+    "snapshot_captured": "Snapshot #{{id}} captured"
+  },
+  "stages": {
+    "1": "Whitelist",
+    "2": "Algorithm",
+    "3": "LLM arbiter",
+    "stage_short": "S{{n}}"
+  },
+  "categories": {
+    "official": "Official",
+    "affiliate_to_brand": "Affiliate → brand",
+    "competitor_hijacking": "Hijacker",
+    "informational": "Informational"
+  },
+  "subcategories": {
+    "official_apex": "Official · Apex domain",
+    "official_localized": "Official · Localized variant",
+    "official_promo_landing": "Official · Promo landing",
+    "official_owned_media": "Official · Owned media",
+    "affiliate_dedicated_review": "Affiliate · Dedicated review",
+    "affiliate_listicle": "Affiliate · Listicle",
+    "affiliate_bonus_promo": "Affiliate · Bonus promo",
+    "affiliate_comparison": "Affiliate · Comparison",
+    "hijacker_direct_competitor": "Hijacker · Direct competitor",
+    "hijacker_affiliate_to_others": "Hijacker · Affiliate to others",
+    "hijacker_blackhat_scam": "Hijacker · Black-hat / scam",
+    "info_news": "Info · News",
+    "info_forum_social": "Info · Forum / social",
+    "info_regulator": "Info · Regulator",
+    "info_gambling_portal": "Info · Gambling portal",
+    "info_other": "Info · Other"
+  },
+  "table": {
+    "headers": {
+      "position": "#",
+      "domain": "Domain",
+      "title": "Title",
+      "category": "Category",
+      "subcategory": "Subcategory",
+      "confidence": "Conf.",
+      "stage": "Stage"
+    },
+    "search_placeholder": "Search domains, titles…",
+    "filter_all": "All",
+    "no_match": "No domains match the current filter."
+  },
+  "charts": {
+    "distribution": {
+      "title": "Category distribution",
+      "info": "Share of the top-N SERP that falls into each of the four taxonomy categories. Computed by counting per-domain classifications and dividing by the snapshot's result count."
+    },
+    "stage_breakdown": {
+      "title": "Pipeline stages used",
+      "info": "How many of the top-N domains were resolved at each stage of the cascade. Whitelist (Stage 1) is a deterministic lookup; Algorithm (Stage 2) extracts page signals and runs rule-based classification; LLM arbiter (Stage 3) is invoked only when Stage 2 confidence falls below threshold."
+    },
+    "sankey": {
+      "title": "Position lineup",
+      "info": "Each tile is one SERP position (left = #1, right = #N). Tile colour = the category that domain falls into. Read at a glance whether the brand owns the top spots or is squeezed by hijackers above the fold."
+    },
+    "trend": {
+      "title": "Category trend",
+      "info": "Daily share-of-voice for each category over the selected window. The latest snapshot of each day is used (deterministic latest-wins).",
+      "empty_title": "Not enough history yet",
+      "empty_hint": "Run scans across multiple days to draw a trend, or seed historical data with the command below.",
+      "range_7": "7 days",
+      "range_14": "14 days",
+      "range_30": "30 days",
+      "range_90": "90 days"
+    }
+  },
+  "snapshot": {
+    "picker_label": "Snapshot",
+    "showing": "Showing snapshot #{{id}} · {{keyword}} / {{geo}} · {{captured}}",
+    "n_hits": "{{n}} hits",
+    "source": "Source: {{source}}",
+    "no_snapshots": "No snapshots in the selected window."
+  },
+  "diff": {
+    "title": "Compare snapshots",
+    "intro": "Pick two snapshots to see what changed between them — newly ranked domains, dropouts, position moves, and category changes.",
+    "snapshot_a": "Older snapshot",
+    "snapshot_b": "Newer snapshot",
+    "added": "Added",
+    "removed": "Removed",
+    "moved": "Moved or re-categorized",
+    "unchanged": "Unchanged",
+    "empty_added": "Nothing entered the top-N between these snapshots.",
+    "empty_removed": "Nothing dropped out.",
+    "empty_moved": "Every shared domain held its position and category.",
+    "select_two": "Select two snapshots to see the diff.",
+    "from_to": "{{from}} → {{to}}"
+  },
+  "methodology": {
+    "title": "How classification works",
+    "intro": "Each top-N SERP result is classified through a three-stage cascade. Cheaper stages run first; expensive ones only when the previous stage isn't confident.",
+    "stage1_title": "Stage 1 — Whitelist",
+    "stage1_body": "Deterministic match against per-brand seed lists (official, partner, competitor) and a global informational set (news, regulators, social platforms). No I/O. Confidence 0.95.",
+    "stage2_title": "Stage 2 — Algorithm",
+    "stage2_body": "Fetches the landing page, extracts signals (affiliate links, schema.org, brand vs competitor mention frequency, redirect-chain destinations), and runs rule-based classification. The decisive rule is the destination-of-redirect ratio: most redirects to the brand → partner; most to competitors → hijacker.",
+    "stage3_title": "Stage 3 — LLM arbiter",
+    "stage3_body": "Invoked only when Stage 2 confidence falls below 0.65. A structured prompt is sent through LiteLLM (OpenRouter) with strict JSON output. Validates and clamps confidence; on any failure (network, invalid JSON, timeout) the verdict falls back to Stage 2 — the pipeline never raises.",
+    "signals_title": "Key signals",
+    "signals_body": "Affiliate-link redirect destinations · schema.org Review.itemReviewed · brand vs competitor mention frequency · primary CTA · page text sentiment · h1 / title patterns.",
+    "taxonomy_title": "Taxonomy",
+    "taxonomy_body": "Four categories × sixteen subcategories. The taxonomy is frozen as code — see ``classifier/taxonomy.py``."
+  },
+  "health": {
+    "title": "System health",
+    "last_scan": "Last scan",
+    "scheduler": "Scheduler",
+    "scheduler_running": "{{n}} jobs queued",
+    "scheduler_off": "Off",
+    "llm": "LLM arbiter",
+    "llm_ready": "Ready",
+    "llm_off": "Disabled",
+    "never": "Never"
+  },
+  "activity": {
+    "title": "Recent activity",
+    "empty": "Activity will appear here after your first scan.",
+    "scan_completed": "Scan #{{id}} · {{keyword}}",
+    "scheduler_started": "Scheduler started · {{n}} jobs"
+  },
+  "scheduler_view": {
+    "title": "Scheduled monitoring",
+    "intro": "Each row is a brand keyword scanned on a recurring cadence. Disable a row to skip it; delete to remove the schedule entirely. The scheduler must be enabled at the process level (SCHEDULER_ENABLED=true) for these jobs to fire — otherwise this is a config-only view.",
+    "headers": {
+      "keyword": "Keyword",
+      "geo": "Geo",
+      "frequency": "Every",
+      "active": "Active",
+      "last_scan": "Last scan",
+      "next_run": "Next run",
+      "actions": "Actions"
+    },
+    "every_hours": "{{n}} h",
+    "scheduler_off_warning": "The background scheduler is currently OFF. Schedule changes are saved but jobs will not fire until SCHEDULER_ENABLED=true.",
+    "empty_title": "No scheduled keywords yet",
+    "empty_body": "Add a keyword to monitor it on a recurring cadence.",
+    "add_title": "Add scheduled keyword",
+    "edit_title": "Edit scheduled keyword",
+    "delete_confirm_title": "Delete scheduled keyword?",
+    "delete_confirm_body": "{{keyword}} ({{geo}}) will no longer be scanned automatically. Existing snapshots are kept.",
+    "saved": "Saved",
+    "deleted": "Deleted"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "uk": "Українська"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "toggle": "Toggle theme"
+  },
+  "common": {
+    "info": "Info",
+    "loading": "Loading…",
+    "n_a": "—"
+  },
+  "drilldown": {
+    "reasoning_title": "Why this category",
+    "reason": {
+      "whitelist_official": "Domain {{domain}} is on the brand's official-domain list.",
+      "whitelist_partner": "Domain {{domain}} is on the brand's known-partner list.",
+      "whitelist_competitor": "Domain {{domain}} is on the brand's known-competitor list.",
+      "whitelist_info_seed": "Domain {{domain}} is on the global informational seed list (news / regulator / portal).",
+      "alg_schema_review_brand": "The page's schema.org Review names the brand — strong partner signal.",
+      "alg_no_affiliate_info": "No affiliate links on the page — treated as informational.",
+      "alg_no_affiliate_news": "No affiliate links and the page declares schema.org Article — treated as news.",
+      "alg_brand_redirect_majority": "Most affiliate redirects on the page resolve to the brand — partner site.",
+      "alg_competitor_redirect_majority": "Most affiliate redirects on the page resolve to competitors — hijacker site.",
+      "alg_brand_mention_dominance": "Mixed redirects, but the brand is mentioned more than any competitor — partner-leaning.",
+      "alg_text_bait_hijacker": "The brand is named in copy but every redirect goes elsewhere — text-bait hijacker.",
+      "alg_fake_official_mimicry": "The page claims to be the brand's official site but the domain isn't on the brand's whitelist and has no verifiable outbound links — fake-official mimicry.",
+      "alg_ambiguous": "Signals are ambiguous; deferring to the LLM arbiter.",
+      "pipeline_fetch_failed": "The page could not be fetched — falling back to informational at low confidence.",
+      "pipeline_whitelist_only": "Whitelist-only mode; no online classification was attempted.",
+      "llm_arbiter": "Classified by the LLM arbiter (stage 3).",
+      "llm_fallback": "LLM arbiter unavailable — kept the stage-2 verdict."
+    },
+    "signals_title": "Signals from the page",
+    "url_title": "Landing URL",
+    "open_url": "Open",
+    "stage_label": "Stage {{n}}",
+    "confidence_label": "{{pct}}% confident",
+    "no_signals": "No structured signals were captured for this page.",
+    "metric": {
+      "affiliate_links": "Affiliate links",
+      "affiliate_links_desc": "Outbound tracker links found on the page",
+      "brand_redirect_ratio": "Redirects to brand",
+      "brand_redirect_ratio_desc": "Share of affiliate redirects ending on a brand-owned domain",
+      "competitor_redirect_ratio": "Redirects to competitors",
+      "competitor_redirect_ratio_desc": "Share of affiliate redirects ending on a competitor",
+      "brand_mentions": "Brand mentions",
+      "brand_mentions_desc": "Times the brand is named in the visible text",
+      "competitor_mentions": "Competitor mentions",
+      "competitor_mentions_desc": "Mentions of competitors combined",
+      "schema_types": "Schema.org types",
+      "schema_review_target": "Review target",
+      "has_tracker": "Tracker domain detected",
+      "yes": "Yes",
+      "no": "No"
+    }
+  }
+}

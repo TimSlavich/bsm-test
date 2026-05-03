@@ -1,0 +1,105 @@
+/* Design tokens. Light is default; dark is opt-in via [data-theme="dark"]. */
+
+:root,
+[data-theme="light"] {
+  /* surface */
+  --bg: #fafafa;
+  --bg-subtle: #f4f4f5;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --overlay: rgba(15, 23, 42, 0.55);
+
+  /* border */
+  --border: #e5e7eb;
+  --border-strong: #d4d4d8;
+
+  /* text */
+  --text: #0a0a0a;
+  --text-muted: #71717a;
+  --text-subtle: #a1a1aa;
+  --text-on-accent: #ffffff;
+
+  /* accent */
+  --accent: #0a0a0a;
+  --accent-hover: #262626;
+  --accent-soft: #f4f4f5;
+  --accent-ring: rgba(10, 10, 10, 0.18);
+
+  /* category palette (used by donut, sankey, badges, charts) */
+  --category-official: #15803d;
+  --category-official-bg: #dcfce7;
+  --category-official-fg: #14532d;
+  --category-affiliate: #1d4ed8;
+  --category-affiliate-bg: #dbeafe;
+  --category-affiliate-fg: #1e3a8a;
+  --category-hijacker: #b91c1c;
+  --category-hijacker-bg: #fee2e2;
+  --category-hijacker-fg: #7f1d1d;
+  --category-info: #52525b;
+  --category-info-bg: #f4f4f5;
+  --category-info-fg: #27272a;
+
+  /* state */
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+
+  /* sizing */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* shadow */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --bg-subtle: #18181b;
+  --card: #18181b;
+  --card-elevated: #27272a;
+  --overlay: rgba(0, 0, 0, 0.7);
+
+  --border: #27272a;
+  --border-strong: #3f3f46;
+
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --text-subtle: #71717a;
+  --text-on-accent: #0a0a0a;
+
+  --accent: #fafafa;
+  --accent-hover: #e4e4e7;
+  --accent-soft: #27272a;
+  --accent-ring: rgba(250, 250, 250, 0.18);
+
+  --category-official: #4ade80;
+  --category-official-bg: rgba(34, 197, 94, 0.14);
+  --category-official-fg: #86efac;
+  --category-affiliate: #60a5fa;
+  --category-affiliate-bg: rgba(59, 130, 246, 0.16);
+  --category-affiliate-fg: #93c5fd;
+  --category-hijacker: #f87171;
+  --category-hijacker-bg: rgba(239, 68, 68, 0.16);
+  --category-hijacker-fg: #fca5a5;
+  --category-info: #a1a1aa;
+  --category-info-bg: rgba(161, 161, 170, 0.14);
+  --category-info-fg: #d4d4d8;
+
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+}

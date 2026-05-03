@@ -1,0 +1,55 @@
+# Prototype-scale stack — SQLite + backend + frontend.
+#
+# Why no Postgres in the prototype: SQLite via aiosqlite handles the
+# 10-row × N-snapshot workload without ceremony. The schema is identical
+# (Alembic migrations are dialect-agnostic for the columns we use), so
+# moving to Postgres for production is a one-line ``DATABASE_URL`` switch.
+services:
+  backend:
+    build:
+      context: ./backend
+    environment:
+      # File-backed SQLite under /data so the volume below persists state
+      # across container restarts and `docker compose down` (without -v).
+      DATABASE_URL: sqlite+aiosqlite:////data/brand_monitor.db
+      SERP_ENGINE: playwright
+      AUTO_CREATE_TABLES: "false"
+      # On by default for the demo: registers one APScheduler job per
+      # active BrandKeyword. Override to "false" if you don't want
+      # background scans.
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+      LITELLM_BASE_URL: ${LITELLM_BASE_URL}
+      LITELLM_API_KEY: ${LITELLM_API_KEY}
+      ARBITER_MODEL: ${ARBITER_MODEL:-openrouter/meta-llama/llama-3.3-70b-instruct:free}
+      ARBITER_MODELS: ${ARBITER_MODELS:-openrouter/meta-llama/llama-3.3-70b-instruct:free,openrouter/meta-llama/llama-3.2-3b-instruct:free}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      # Self-hosted Langfuse runs on the developer's host; the backend
+      # container reaches it via host.docker.internal. Override with the
+      # public Langfuse cloud URL or your own LB for prod.
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:

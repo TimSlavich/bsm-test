@@ -1,0 +1,9 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Activity, BookOpen, CalendarClock, GitCompare, LayoutDashboard } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
+export function Topbar({ view, onViewChange, onOpenMethodology, rightSlot }) {
+    const { t } = useTranslation();
+    return (_jsxs("header", { className: "topbar", children: [_jsxs("div", { className: "topbar__brand", children: [_jsx("span", { className: "topbar__logo", "aria-hidden": true, children: _jsx(Activity, { size: 18 }) }), _jsxs("div", { children: [_jsx("div", { className: "topbar__title", children: t("app.title") }), _jsx("div", { className: "topbar__subtitle", children: t("app.subtitle") })] })] }), _jsxs("nav", { className: "topbar__nav", "aria-label": "Primary", children: [_jsxs("button", { type: "button", className: "topbar__navlink", "data-active": view === "dashboard" || undefined, onClick: () => onViewChange("dashboard"), children: [_jsx(LayoutDashboard, { size: 14 }), t("nav.dashboard")] }), _jsxs("button", { type: "button", className: "topbar__navlink", "data-active": view === "compare" || undefined, onClick: () => onViewChange("compare"), children: [_jsx(GitCompare, { size: 14 }), t("nav.compare")] }), _jsxs("button", { type: "button", className: "topbar__navlink", "data-active": view === "scheduler" || undefined, onClick: () => onViewChange("scheduler"), children: [_jsx(CalendarClock, { size: 14 }), t("nav.scheduler")] }), _jsxs("button", { type: "button", className: "topbar__navlink", onClick: onOpenMethodology, children: [_jsx(BookOpen, { size: 14 }), t("nav.methodology")] })] }), _jsxs("div", { className: "topbar__right", children: [rightSlot, _jsx(LanguageSwitcher, {}), _jsx(ThemeToggle, {})] })] }));
+}

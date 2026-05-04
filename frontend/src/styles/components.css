@@ -256,6 +256,46 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
+.field[data-invalid="true"] .input {
+  border-color: var(--danger, #e5484d);
+}
+.field[data-invalid="true"] .input:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #e5484d) 25%, transparent);
+}
+.field__error {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--danger, #e5484d);
+}
+
+.validation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.validation-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--danger, #e5484d) 8%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--danger, #e5484d) 25%, var(--border));
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.validation-list__item::before {
+  content: "•";
+  color: var(--danger, #e5484d);
+  font-weight: 700;
+  margin-top: -1px;
+}
 .input__icon {
   display: inline-flex;
   color: var(--text-subtle);

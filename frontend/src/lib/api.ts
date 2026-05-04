@@ -129,6 +129,33 @@ async function jput<T>(path: string, body: unknown): Promise<T> {
   return r.json() as Promise<T>;
 }
 
+export type ValidationProblem = { field: string; code: string; message: string };
+
+export type GeoProfile = { code: string; name: string };
+
+/** Supported geos served from the SERP fetcher's registry. */
+export const fetchGeos = () =>
+  jget<{ geos: GeoProfile[] }>("/api/geos").then((r) => r.geos);
+
+export type ScanInput = {
+  brand_slug: string;
+  keyword: string;
+  geo: string;
+  top_n?: number;
+};
+
+/** Pre-flight validation for scan inputs. Returns problems (empty = ok). */
+export async function validateScanInput(input: ScanInput): Promise<ValidationProblem[]> {
+  const r = await fetch(apiUrl("/api/scans/validate"), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ top_n: 10, ...input }),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  const body = (await r.json()) as { problems: ValidationProblem[] };
+  return body.problems ?? [];
+}
+
 export async function triggerScan(input: {
   brand_slug: string;
   keyword: string;

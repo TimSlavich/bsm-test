@@ -36,6 +36,18 @@
     "body": "Run your first scan to populate the dashboard. Default values fetch the top 10 results for {{keyword}} in {{geo}}.",
     "cta": "Run first scan"
   },
+  "validation": {
+    "title": "Check the form before scanning",
+    "subtitle": "Fix the items below and try again.",
+    "dismiss": "Got it",
+    "brand_required": "Pick a brand to scan.",
+    "brand_unknown": "This brand isn't set up yet. Use \"starcasino\" or add a new one in brand settings.",
+    "keyword_required": "Enter a search keyword.",
+    "keyword_too_long": "The keyword is too long — keep it under 200 characters.",
+    "geo_required": "Choose a country code.",
+    "geo_unsupported": "That country code isn't supported. Try one of: NL, BE, DE, FR, GB, US.",
+    "top_n_out_of_range": "The number of results must be between 1 and 20."
+  },
   "progress": {
     "title": "Live scan in progress",
     "scan_start": "Starting scan…",

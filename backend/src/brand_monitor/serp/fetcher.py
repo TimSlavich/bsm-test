@@ -18,6 +18,7 @@ import structlog
 from bs4 import BeautifulSoup
 
 from ..domain import canonical_domain as _root
+from .geos import DEFAULT_PROFILE, GeoProfile, get_geo_profile
 
 log = structlog.get_logger()
 
@@ -50,10 +51,17 @@ USER_AGENTS = (
 
 
 def build_search_url(keyword: str, geo: str = "NL", num: int = 20) -> str:
-    geo_lower = geo.lower()
+    """Build the Google search URL using the geo registry.
+
+    Falls back to the NL profile if the supplied ``geo`` isn't in the
+    registry — the validator should have caught that earlier; this is
+    defence-in-depth so the fetcher never crashes on an unknown code.
+    """
+    profile = get_geo_profile(geo) or DEFAULT_PROFILE
     return (
-        f"https://www.google.{geo_lower}/search?"
-        f"q={quote_plus(keyword)}&hl={geo_lower}&gl={geo}&num={num}&pws=0"
+        f"https://www.google.{profile.google_tld}/search?"
+        f"q={quote_plus(keyword)}&hl={profile.google_hl}&gl={profile.google_gl}"
+        f"&num={num}&pws=0"
     )
 
 
@@ -171,11 +179,12 @@ class SerpFetcher:
         self, keyword: str, geo: str = "NL", num: int = 20
     ) -> FetchOutcome:
         log.info("serp_fetch_start", keyword=keyword, geo=geo, num=num)
+        profile = get_geo_profile(geo) or DEFAULT_PROFILE
 
         if self.prefer_playwright:
             url = build_search_url(keyword, geo, num)
             try:
-                html = await self._fetch_playwright(url)
+                html = await self._fetch_playwright(url, profile)
                 if html and "did not match any documents" not in html:
                     parsed = parse_serp_html(html)
                     if parsed:
@@ -185,7 +194,7 @@ class SerpFetcher:
                 log.warning("google_playwright_failed", error=str(e))
 
         try:
-            ddg = await self._fetch_duckduckgo(keyword, geo)
+            ddg = await self._fetch_duckduckgo(keyword, profile)
             if ddg:
                 log.info("serp_source_used", source="duckduckgo_html", n=len(ddg))
                 return FetchOutcome(ddg[:num], "duckduckgo_html")
@@ -207,23 +216,27 @@ class SerpFetcher:
         log.error("serp_all_sources_failed", keyword=keyword)
         return FetchOutcome([], "none")
 
-    async def _fetch_duckduckgo(self, keyword: str, geo: str) -> list[SerpResult]:
-        kl = f"{geo.lower()}-{geo.lower()}"
+    async def _fetch_duckduckgo(
+        self, keyword: str, profile: GeoProfile
+    ) -> list[SerpResult]:
         async with httpx.AsyncClient(
             headers={
                 "User-Agent": random.choice(USER_AGENTS),
-                "Accept-Language": f"{geo.lower()}-{geo.upper()},{geo.lower()};q=0.9,en;q=0.7",
+                "Accept-Language": profile.accept_language,
             },
             follow_redirects=True,
             timeout=15.0,
         ) as client:
             r = await client.get(
-                "https://html.duckduckgo.com/html/", params={"q": keyword, "kl": kl}
+                "https://html.duckduckgo.com/html/",
+                params={"q": keyword, "kl": profile.ddg_region},
             )
             r.raise_for_status()
             return parse_ddg_html(r.text)
 
-    async def _fetch_playwright(self, url: str) -> str | None:
+    async def _fetch_playwright(
+        self, url: str, profile: GeoProfile = DEFAULT_PROFILE
+    ) -> str | None:
         try:
             from playwright.async_api import async_playwright
         except ImportError:
@@ -248,11 +261,9 @@ class SerpFetcher:
                 context = await browser.new_context(
                     user_agent=random.choice(USER_AGENTS),
                     viewport={"width": 1280, "height": 800},
-                    locale="nl-NL",
-                    timezone_id="Europe/Amsterdam",
-                    extra_http_headers={
-                        "Accept-Language": "nl-NL,nl;q=0.9,en-US;q=0.7,en;q=0.5",
-                    },
+                    locale=profile.locale,
+                    timezone_id=profile.timezone,
+                    extra_http_headers={"Accept-Language": profile.accept_language},
                 )
                 if stealth is not None:
                     await stealth.apply_stealth_async(context)
@@ -262,23 +273,38 @@ class SerpFetcher:
                     )
 
                 # Pre-set Google's consent cookies — skips the consent.google.com
-                # interstitial that breaks an unattended scrape.
-                await context.add_cookies(
-                    [
-                        {"name": "CONSENT", "value": "YES+NL.nl+V14+BX", "domain": ".google.com", "path": "/"},
-                        {"name": "CONSENT", "value": "YES+NL.nl+V14+BX", "domain": ".google.nl", "path": "/"},
+                # interstitial that breaks an unattended scrape. We seed the
+                # cookie on both ``.google.com`` and the geo-specific TLD
+                # (``.google.nl``, ``.google.de``, …) since Google routes
+                # via the localized domain after the gl/hl negotiation.
+                cookies: list[dict[str, str]] = [
+                    {
+                        "name": "CONSENT",
+                        "value": profile.consent_value,
+                        "domain": ".google.com",
+                        "path": "/",
+                    },
+                    {
+                        "name": "CONSENT",
+                        "value": profile.consent_value,
+                        "domain": f".google.{profile.google_tld}",
+                        "path": "/",
+                    },
+                ]
+                if profile.socs_value:
+                    cookies.append(
                         {
                             "name": "SOCS",
-                            "value": "CAESHAgBEhJnd3NfMjAyMzAxMTAtMF9SQzIaAm5sIAEaBgiAo7CdBg",
+                            "value": profile.socs_value,
                             "domain": ".google.com",
                             "path": "/",
-                        },
-                    ]
-                )
+                        }
+                    )
+                await context.add_cookies(cookies)
 
                 page = await context.new_page()
                 await page.goto(url, wait_until="domcontentloaded", timeout=25000)
-                for label in ("Alles accepteren", "Accept all", "Ik ga akkoord"):
+                for label in profile.consent_button_labels:
                     try:
                         await page.get_by_role("button", name=label).first.click(timeout=2000)
                         break

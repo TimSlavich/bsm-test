@@ -14,10 +14,11 @@ import { HealthCard } from "../features/dashboard/HealthCard";
 import { ScanForm } from "../features/scan/ScanForm";
 import { ScanProgress } from "../features/scan/ScanProgress";
 import { useScanStream } from "../features/scan/useScanStream";
+import { ValidationDialog } from "../features/scan/ValidationDialog";
 import { DomainTable } from "../features/snapshot/DomainTable";
 import { DrilldownModal } from "../features/snapshot/DrilldownModal";
 import { SnapshotPicker } from "../features/snapshot/SnapshotPicker";
-import { fetchSnapshotResults, fetchSnapshots, fetchTrend, } from "../lib/api";
+import { fetchSnapshotResults, fetchSnapshots, fetchTrend, validateScanInput, } from "../lib/api";
 import { formatDate } from "../lib/format";
 const DEFAULT_FORM = {
     brand_slug: "starcasino",
@@ -34,6 +35,33 @@ export function useDashboard() {
     const [drilldown, setDrilldown] = useState(null);
     const [selectedSnapshot, setSelectedSnapshot] = useState(null);
     const [trendDays, setTrendDays] = useState(14);
+    const [scanProblems, setScanProblems] = useState([]);
+    // Pre-flight validate, then open the SSE stream. EventSource can't
+    // read 400 bodies, so problems must be surfaced via the validate
+    // endpoint before we ever open the stream. Problems are shown in a
+    // single friendly modal — no inline tech captions under each field.
+    const handleSubmit = async () => {
+        try {
+            const problems = await validateScanInput(form);
+            setScanProblems(problems);
+            if (problems.length > 0)
+                return;
+            runScan(form);
+        }
+        catch (e) {
+            const msg = e instanceof Error ? e.message : "Validation request failed";
+            toast.error(msg);
+        }
+    };
+    // Clear errors as soon as the user edits the form.
+    const handleFormChange = (next) => {
+        setForm(next);
+        if (scanProblems.length > 0)
+            setScanProblems([]);
+    };
+    // Pass field codes to ScanForm only for the data-invalid border highlight;
+    // the actual messages live in the modal so the form stays uncluttered.
+    const invalidFields = scanProblems.reduce((acc, p) => ({ ...acc, [p.field]: "" }), {});
     const snapshotsQ = useQuery({
         queryKey: ["snapshots", form.brand_slug],
         queryFn: () => fetchSnapshots(form.brand_slug, 30),
@@ -85,13 +113,13 @@ export function useDashboard() {
         { value: "30", label: t("charts.trend.range_30") },
         { value: "90", label: t("charts.trend.range_90") },
     ], [t]);
-    const sidebar = (_jsxs(_Fragment, { children: [_jsxs("section", { className: "sidebar-section", children: [_jsx("h3", { className: "sidebar-section__title", children: t("actions.run_scan") }), _jsx(ScanForm, { values: form, onChange: setForm, onSubmit: () => runScan(form), isRunning: scanState.status === "running" })] }), _jsxs("section", { className: "sidebar-section", children: [_jsx("h3", { className: "sidebar-section__title", children: t("snapshot.picker_label") }), _jsx(SnapshotPicker, { snapshots: snapshotsQ.data ?? [], selected: selectedSnapshot, onSelect: setSelectedSnapshot })] })] }));
-    const main = (_jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [scanState.status !== "idle" && _jsx(ScanProgress, { state: scanState }), !hasSnapshots && scanState.status === "idle" ? (_jsx(Card, { children: _jsx(CardBody, { children: _jsx(EmptyState, { icon: _jsx(Search, { size: 24 }), title: t("empty.title"), description: t("empty.body", { keyword: form.keyword, geo: form.geo }), action: _jsx(Button, { leftIcon: _jsx(Sparkles, { size: 14 }), size: "lg", onClick: () => runScan(form), children: t("empty.cta") }) }) }) })) : (_jsxs(_Fragment, { children: [activeSnapshot && (_jsx("div", { className: "snapshot-meta", children: t("snapshot.showing", {
+    const sidebar = (_jsxs(_Fragment, { children: [_jsxs("section", { className: "sidebar-section", children: [_jsx("h3", { className: "sidebar-section__title", children: t("actions.run_scan") }), _jsx(ScanForm, { values: form, onChange: handleFormChange, onSubmit: handleSubmit, isRunning: scanState.status === "running", errors: invalidFields })] }), _jsxs("section", { className: "sidebar-section", children: [_jsx("h3", { className: "sidebar-section__title", children: t("snapshot.picker_label") }), _jsx(SnapshotPicker, { snapshots: snapshotsQ.data ?? [], selected: selectedSnapshot, onSelect: setSelectedSnapshot })] })] }));
+    const main = (_jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [scanState.status !== "idle" && _jsx(ScanProgress, { state: scanState }), !hasSnapshots && scanState.status === "idle" ? (_jsx(Card, { children: _jsx(CardBody, { children: _jsx(EmptyState, { icon: _jsx(Search, { size: 24 }), title: t("empty.title"), description: t("empty.body", { keyword: form.keyword, geo: form.geo }), action: _jsx(Button, { leftIcon: _jsx(Sparkles, { size: 14 }), size: "lg", onClick: handleSubmit, children: t("empty.cta") }) }) }) })) : (_jsxs(_Fragment, { children: [activeSnapshot && (_jsx("div", { className: "snapshot-meta", children: t("snapshot.showing", {
                             id: activeSnapshot.snapshot_id,
                             keyword: activeSnapshot.keyword,
                             geo: activeSnapshot.geo,
                             captured: formatDate(activeSnapshot.captured_at, lang),
-                        }) })), _jsxs("div", { className: "grid grid--two", children: [_jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.distribution.title"), _jsx(InfoPopover, { title: t("charts.distribution.title"), children: t("charts.distribution.info") })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 220 })) : (_jsx(CategoryDonut, { results: results })) })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.stage_breakdown.title"), _jsx(InfoPopover, { title: t("charts.stage_breakdown.title"), children: t("charts.stage_breakdown.info") })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 140 })) : (_jsx(StageBreakdown, { results: results })) })] })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.sankey.title"), _jsx(InfoPopover, { title: t("charts.sankey.title"), children: t("charts.sankey.info") })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 140 })) : (_jsx(PositionLineup, { results: results })) })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.trend.title"), _jsx(InfoPopover, { title: t("charts.trend.title"), children: t("charts.trend.info") })] }), action: _jsx(Select, { value: String(trendDays), onChange: (v) => setTrendDays(Number(v)), options: trendOptions, size: "sm", ariaLabel: t("charts.trend.title") }) }), _jsx(CardBody, { children: trendQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 260 })) : (_jsx(TrendChart, { data: trendQ.data ?? [] })) })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("table.headers.domain"), " ", _jsx(Badge, { tone: "muted", children: results.length })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 400 })) : (_jsx(DomainTable, { results: results, onRowClick: setDrilldown })) })] })] })), _jsx(DrilldownModal, { result: drilldown, onClose: () => setDrilldown(null) })] }));
+                        }) })), _jsxs("div", { className: "grid grid--two", children: [_jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.distribution.title"), _jsx(InfoPopover, { title: t("charts.distribution.title"), children: t("charts.distribution.info") })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 220 })) : (_jsx(CategoryDonut, { results: results })) })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.stage_breakdown.title"), _jsx(InfoPopover, { title: t("charts.stage_breakdown.title"), children: t("charts.stage_breakdown.info") })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 140 })) : (_jsx(StageBreakdown, { results: results })) })] })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.sankey.title"), _jsx(InfoPopover, { title: t("charts.sankey.title"), children: t("charts.sankey.info") })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 140 })) : (_jsx(PositionLineup, { results: results })) })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("charts.trend.title"), _jsx(InfoPopover, { title: t("charts.trend.title"), children: t("charts.trend.info") })] }), action: _jsx(Select, { value: String(trendDays), onChange: (v) => setTrendDays(Number(v)), options: trendOptions, size: "sm", ariaLabel: t("charts.trend.title") }) }), _jsx(CardBody, { children: trendQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 260 })) : (_jsx(TrendChart, { data: trendQ.data ?? [] })) })] }), _jsxs(Card, { children: [_jsx(CardHeader, { title: _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 }, children: [t("table.headers.domain"), " ", _jsx(Badge, { tone: "muted", children: results.length })] }) }), _jsx(CardBody, { children: resultsQ.isLoading ? (_jsx(Skeleton, { width: "100%", height: 400 })) : (_jsx(DomainTable, { results: results, onRowClick: setDrilldown })) })] })] })), _jsx(DrilldownModal, { result: drilldown, onClose: () => setDrilldown(null) }), _jsx(ValidationDialog, { problems: scanProblems, onClose: () => setScanProblems([]) })] }));
     const rail = (_jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [_jsx(HealthCard, { latestSnapshot: latestSnapshot }), _jsx(ActivityFeed, { snapshots: snapshotsQ.data ?? [] })] }));
     return { sidebar, main, rail };
 }

@@ -25,6 +25,7 @@ import { HealthCard } from "../features/dashboard/HealthCard";
 import { ScanForm, type ScanFormValues } from "../features/scan/ScanForm";
 import { ScanProgress } from "../features/scan/ScanProgress";
 import { useScanStream } from "../features/scan/useScanStream";
+import { ValidationDialog } from "../features/scan/ValidationDialog";
 import { DomainTable } from "../features/snapshot/DomainTable";
 import { DrilldownModal } from "../features/snapshot/DrilldownModal";
 import { SnapshotPicker } from "../features/snapshot/SnapshotPicker";
@@ -32,7 +33,9 @@ import {
   fetchSnapshotResults,
   fetchSnapshots,
   fetchTrend,
+  validateScanInput,
   type ResultItem,
+  type ValidationProblem,
 } from "../lib/api";
 import { formatDate } from "../lib/format";
 
@@ -59,6 +62,36 @@ export function useDashboard(): DashboardSlots {
   const [drilldown, setDrilldown] = useState<ResultItem | null>(null);
   const [selectedSnapshot, setSelectedSnapshot] = useState<number | null>(null);
   const [trendDays, setTrendDays] = useState<number>(14);
+  const [scanProblems, setScanProblems] = useState<ValidationProblem[]>([]);
+
+  // Pre-flight validate, then open the SSE stream. EventSource can't
+  // read 400 bodies, so problems must be surfaced via the validate
+  // endpoint before we ever open the stream. Problems are shown in a
+  // single friendly modal — no inline tech captions under each field.
+  const handleSubmit = async () => {
+    try {
+      const problems = await validateScanInput(form);
+      setScanProblems(problems);
+      if (problems.length > 0) return;
+      runScan(form);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Validation request failed";
+      toast.error(msg);
+    }
+  };
+
+  // Clear errors as soon as the user edits the form.
+  const handleFormChange = (next: ScanFormValues) => {
+    setForm(next);
+    if (scanProblems.length > 0) setScanProblems([]);
+  };
+
+  // Pass field codes to ScanForm only for the data-invalid border highlight;
+  // the actual messages live in the modal so the form stays uncluttered.
+  const invalidFields: Record<string, string> = scanProblems.reduce(
+    (acc, p) => ({ ...acc, [p.field]: "" }),
+    {} as Record<string, string>,
+  );
 
   const snapshotsQ = useQuery({
     queryKey: ["snapshots", form.brand_slug],
@@ -126,9 +159,10 @@ export function useDashboard(): DashboardSlots {
         <h3 className="sidebar-section__title">{t("actions.run_scan")}</h3>
         <ScanForm
           values={form}
-          onChange={setForm}
-          onSubmit={() => runScan(form)}
+          onChange={handleFormChange}
+          onSubmit={handleSubmit}
           isRunning={scanState.status === "running"}
+          errors={invalidFields}
         />
       </section>
 
@@ -155,7 +189,7 @@ export function useDashboard(): DashboardSlots {
               title={t("empty.title")}
               description={t("empty.body", { keyword: form.keyword, geo: form.geo })}
               action={
-                <Button leftIcon={<Sparkles size={14} />} size="lg" onClick={() => runScan(form)}>
+                <Button leftIcon={<Sparkles size={14} />} size="lg" onClick={handleSubmit}>
                   {t("empty.cta")}
                 </Button>
               }
@@ -286,6 +320,7 @@ export function useDashboard(): DashboardSlots {
       )}
 
       <DrilldownModal result={drilldown} onClose={() => setDrilldown(null)} />
+      <ValidationDialog problems={scanProblems} onClose={() => setScanProblems([])} />
     </div>
   );
 

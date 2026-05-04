@@ -34,6 +34,20 @@ async function jput(path, body) {
         throw new Error(await r.text());
     return r.json();
 }
+/** Supported geos served from the SERP fetcher's registry. */
+export const fetchGeos = () => jget("/api/geos").then((r) => r.geos);
+/** Pre-flight validation for scan inputs. Returns problems (empty = ok). */
+export async function validateScanInput(input) {
+    const r = await fetch(apiUrl("/api/scans/validate"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ top_n: 10, ...input }),
+    });
+    if (!r.ok)
+        throw new Error(await r.text());
+    const body = (await r.json());
+    return body.problems ?? [];
+}
 export async function triggerScan(input) {
     return jpost("/api/scans", { top_n: 10, ...input });
 }

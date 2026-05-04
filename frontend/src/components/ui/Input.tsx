@@ -24,14 +24,21 @@ interface FieldProps {
   hint?: ReactNode;
   htmlFor?: string;
   children: ReactNode;
+  /** When truthy, paints the input border red. The actual user-facing
+   * message lives in a separate modal — we deliberately don't render
+   * anything underneath so the form stays compact. Pass an empty string
+   * to flag invalid without text content; pass non-empty to also render
+   * a small caption (kept for non-form contexts that want both). */
+  error?: ReactNode;
 }
 
-export function Field({ label, hint, htmlFor, children }: FieldProps) {
+export function Field({ label, hint, htmlFor, children, error }: FieldProps) {
+  const invalid = error !== undefined && error !== null && error !== false;
   return (
-    <label className="field" htmlFor={htmlFor}>
+    <label className="field" htmlFor={htmlFor} data-invalid={invalid ? "true" : undefined}>
       <span className="field__label">
         {label}
-        {hint && <span className="field__hint">{hint}</span>}
+        {hint && !invalid && <span className="field__hint">{hint}</span>}
       </span>
       {children}
     </label>

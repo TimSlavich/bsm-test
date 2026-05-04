@@ -37,10 +37,16 @@ UtcDatetime = Annotated[
 
 
 class ScanRequest(BaseModel):
-    brand_slug: str = Field(..., examples=["starcasino"])
-    keyword: str = Field(..., examples=["starcasino"])
-    geo: str = Field("NL", min_length=2, max_length=4)
-    top_n: int = Field(10, ge=1, le=20)
+    """Loose schema — business-rule validation lives in
+    :func:`brand_monitor.api.validation.validate_scan_request` so all
+    field problems surface in one structured 400 response instead of
+    Pydantic intercepting and returning only the first.
+    """
+
+    brand_slug: str = Field("", examples=["starcasino"])
+    keyword: str = Field("", examples=["starcasino"])
+    geo: str = Field("NL", examples=["NL"])
+    top_n: int = Field(10, examples=[10])
 
 
 class ResultItem(BaseModel):

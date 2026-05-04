@@ -1,8 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { Play } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Field, Input, Tooltip } from "../../components/ui";
+import { Button, Field, Input, Select, type SelectOption, Tooltip } from "../../components/ui";
+import { fetchGeos } from "../../lib/api";
 
 export interface ScanFormValues {
   brand_slug: string;
@@ -16,14 +18,29 @@ interface ScanFormProps {
   onChange: (next: ScanFormValues) => void;
   onSubmit: () => void;
   isRunning: boolean;
+  /** Per-field validation messages keyed by field name. Cleared by the
+   * parent when the user edits any input. */
+  errors?: Record<string, string>;
 }
 
-export function ScanForm({ values, onChange, onSubmit, isRunning }: ScanFormProps) {
+export function ScanForm({ values, onChange, onSubmit, isRunning, errors }: ScanFormProps) {
+  const fieldError = (k: keyof ScanFormValues): string | undefined => errors?.[k];
+
+  // Geo dropdown is fed from /api/geos (single source of truth for
+  // the supported set — same registry the validator and SERP fetcher
+  // use). Cached for the session; supported geos rarely change.
+  const geosQ = useQuery({
+    queryKey: ["geos"],
+    queryFn: fetchGeos,
+    staleTime: Infinity,
+  });
+  const geoOptions: SelectOption[] = (geosQ.data ?? [{ code: values.geo, name: values.geo }]).map(
+    (g) => ({ value: g.code, label: `${g.code} — ${g.name}` }),
+  );
   const { t } = useTranslation();
   const ids = {
     brand: useId(),
     keyword: useId(),
-    geo: useId(),
     top_n: useId(),
   };
 
@@ -50,6 +67,7 @@ export function ScanForm({ values, onChange, onSubmit, isRunning }: ScanFormProp
           </>
         }
         htmlFor={ids.brand}
+        error={fieldError("brand_slug")}
       >
         <Input
           id={ids.brand}
@@ -72,6 +90,7 @@ export function ScanForm({ values, onChange, onSubmit, isRunning }: ScanFormProp
           </>
         }
         htmlFor={ids.keyword}
+        error={fieldError("keyword")}
       >
         <Input
           id={ids.keyword}
@@ -93,14 +112,13 @@ export function ScanForm({ values, onChange, onSubmit, isRunning }: ScanFormProp
               </Tooltip>
             </>
           }
-          htmlFor={ids.geo}
+          error={fieldError("geo")}
         >
-          <Input
-            id={ids.geo}
+          <Select
             value={values.geo}
-            onChange={(e) => set("geo", e.target.value.toUpperCase().slice(0, 4))}
-            maxLength={4}
-            autoComplete="off"
+            onChange={(v) => set("geo", v)}
+            options={geoOptions}
+            ariaLabel={t("scan_form.geo")}
           />
         </Field>
 
@@ -116,6 +134,7 @@ export function ScanForm({ values, onChange, onSubmit, isRunning }: ScanFormProp
             </>
           }
           htmlFor={ids.top_n}
+          error={fieldError("top_n")}
         >
           <Input
             id={ids.top_n}

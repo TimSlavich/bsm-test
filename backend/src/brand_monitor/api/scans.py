@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
 from ..db.models import DomainClassification, SerpResult, SerpSnapshot
+from ..serp.geos import geo_profiles
 from ..services.scan import run_scan
 from ._deps import session_dep
 from .schemas import (
@@ -25,14 +26,61 @@ from .schemas import (
     SnapshotDiff,
     SnapshotSummary,
 )
+from .validation import validate_scan_request
 
 router = APIRouter(tags=["scans"])
+
+
+@router.get("/geos", status_code=status.HTTP_200_OK)
+def list_geos() -> dict[str, list[dict[str, str]]]:
+    """List supported geos with display names so the frontend can render
+    a typed dropdown instead of free-form input."""
+    return {
+        "geos": [
+            {"code": p.code, "name": p.name}
+            for p in sorted(geo_profiles(), key=lambda p: p.code)
+        ]
+    }
+
+
+@router.post("/scans/validate", status_code=status.HTTP_200_OK)
+async def validate_scan(
+    req: ScanRequest, session: AsyncSession = Depends(session_dep)
+) -> dict[str, list[dict[str, str]]]:
+    """Pre-flight check for scan inputs.
+
+    Returns ``{"problems": [...]}`` regardless of validity (empty list
+    means the request would succeed). The frontend calls this before
+    opening the SSE stream, because ``EventSource`` cannot read the body
+    of a 400 response — it only sees a generic onerror.
+    """
+    problems = await validate_scan_request(
+        session=session,
+        brand_slug=req.brand_slug,
+        keyword=req.keyword,
+        geo=req.geo,
+        top_n=req.top_n,
+    )
+    return {"problems": [p.as_dict() for p in problems]}
 
 
 @router.post("/scans", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
 async def trigger_scan(
     req: ScanRequest, session: AsyncSession = Depends(session_dep)
 ) -> ScanResponse:
+    problems = await validate_scan_request(
+        session=session,
+        brand_slug=req.brand_slug,
+        keyword=req.keyword,
+        geo=req.geo,
+        top_n=req.top_n,
+    )
+    if problems:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=[p.as_dict() for p in problems],
+        )
+
     try:
         result = await run_scan(
             session=session,
@@ -58,10 +106,10 @@ async def trigger_scan(
 
 @router.get("/scans/stream")
 async def stream_scan(
-    brand_slug: str = Query(...),
-    keyword: str = Query(...),
-    geo: str = Query("NL", min_length=2, max_length=4),
-    top_n: int = Query(10, ge=1, le=20),
+    brand_slug: str = Query(""),
+    keyword: str = Query(""),
+    geo: str = Query("NL"),
+    top_n: int = Query(10),
 ):
     """Server-Sent Events stream of a live scan.
 
@@ -69,7 +117,25 @@ async def stream_scan(
     ``serp_fetched``, ``classifying`` per domain, ``classified`` per domain,
     ``persist_done``, then a final ``complete`` or ``error``). The session
     is opened inside the generator so it spans the full streaming lifetime.
+
+    Validation runs *before* opening the stream so a bad request gets a
+    plain 400 with structured detail (the EventSource API can't see SSE
+    error events emitted before the first ``message``).
     """
+
+    async with get_session() as _validate_session:
+        problems = await validate_scan_request(
+            session=_validate_session,
+            brand_slug=brand_slug,
+            keyword=keyword,
+            geo=geo,
+            top_n=top_n,
+        )
+    if problems:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=[p.as_dict() for p in problems],
+        )
 
     queue: asyncio.Queue[tuple[str, dict] | None] = asyncio.Queue()
 
